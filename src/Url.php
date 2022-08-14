@@ -51,6 +51,19 @@ class Url
         return $this;
     }
 
+    public function base64Encode(): string
+    {
+        return base64_encode($this->get());
+    }
+
+    public function base64Decode(): self
+    {
+        $this->url = base64_decode($this->url);
+        $this->extractUrl($this->url);
+
+        return $this;
+    }
+
     /**
      * @return string
      */
