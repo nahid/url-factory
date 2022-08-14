@@ -107,7 +107,7 @@ class Url
      */
     public function concatUri(string $uri): self
     {
-        if (!$this->pregCheck($uri, '/^[a-z0-9\-_\/]+$/i')) {
+        if (!$this->pregCheck($uri, '/^[a-z0-9.\-_\/]+$/i')) {
             throw new \Exception('Invalid URI');
         }
 
