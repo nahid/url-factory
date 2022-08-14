@@ -105,7 +105,7 @@ class Url
      * @param string $uri
      * @return $this
      */
-    public function concatUri(string $uri): self
+    public function appendUriSegment(string $uri): self
     {
         if (!$this->pregCheck($uri, '/^[a-z0-9.\-_\/]+$/i')) {
             throw new \Exception('Invalid URI');
