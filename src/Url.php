@@ -18,12 +18,19 @@ class Url
     protected ?UrlSigner $urlSigner = null;
 
 
+    /**
+     * @param string $url
+     * @param array $config
+     */
     public function __construct(string $url, array $config = [])
     {
         $this->config = $config;
         $this->extractUrl($url);
     }
 
+    /**
+     * @return string
+     */
     public function get(): string
     {
         $this->make();
@@ -31,139 +38,237 @@ class Url
         return $this->url;
     }
 
+    /**
+     * @return string
+     */
     public function getDomain(): string
     {
-        return $this->meta['domain'];
+        return $this->meta[Enum::URL_SCHEME];
     }
 
+    /**
+     * @return string
+     */
     public function getExtension(): string
     {
-        return $this->meta['extension'] ?? '';
+        return $this->meta[Enum::URL_EXTENSION] ?? '';
     }
 
+    /**
+     * @return string
+     */
     public function getSubdomain(): string
     {
-        return $this->meta['subDomain'] ?? '';
+        return $this->meta[Enum::URL_SUB_DOMAIN] ?? '';
     }
 
+    /**
+     * @param string $key
+     * @param string|int|float $value
+     * @return $this
+     */
     public function addQueryParam(string $key, string|int|float $value): self
     {
-        $this->meta['queryParams'][$key] = $value;
-        $this->meta['query'] = http_build_query($this->meta['queryParams']);
+        $this->meta[Enum::URL_QUERY_PARAMS][$key] = $value;
+        $this->meta[Enum::URL_QUERY] = http_build_query($this->meta[Enum::URL_QUERY_PARAMS]);
 
         return $this;
     }
 
+    /**
+     * @param string $uri
+     * @return $this
+     */
     public function concatUri(string $uri): self
     {
-        $path = $this->meta['path'] ?? '';
+        if (!$this->pregCheck($uri, '/^[a-z0-9\-_\/]+$/i')) {
+            throw new \Exception('Invalid URI');
+        }
+
+        $path = $this->meta[Enum::URL_PATH] ?? '';
         $path = rtrim($path, '/');
         $uri = '/' . ltrim($uri, '/');
 
-        $this->meta['path'] = $path . $uri;
+        $this->meta[Enum::URL_PATH] = $path . $uri;
 
         return $this;
     }
 
+    /**
+     * @return $this
+     */
     public function useSchemeHttps(): self
     {
-        $this->meta['scheme'] = 'https';
+        $this->meta[Enum::URL_SCHEME] = 'https';
 
         return $this;
     }
 
+    /**
+     * @return $this
+     */
     public function useSchemeHttp(): self
     {
-        $this->meta['scheme'] = 'http';
+        $this->meta[Enum::URL_SCHEME] = 'http';
 
         return $this;
     }
 
+    /**
+     * @param string $domain
+     * @return $this
+     */
     public function useDomain(string $domain): self
     {
+        if (!$this->pregCheck($domain, '/^(?:([a-z.]+))[a-z0-9\-]+.[a-z]{2,8}$/i')) {
+            throw new \Exception('Invalid domain');
+        }
+
         $this->extractDomain($domain);
 
         return $this;
     }
 
+    /**
+     * @param string $extension
+     * @return $this
+     */
     public function useExtension(string $extension): self
     {
-        $this->meta['extension'] = $extension;
+        if (!$this->pregCheck($extension, '/^[a-z]{2,8}$/i')) {
+            throw new \InvalidArgumentException('Invalid extension');
+        }
+
+        $this->meta[Enum::URL_EXTENSION] = $extension;
         $domain = explode('.', $this->getDomain());
         $domain[count($domain) - 1] = $extension;
-        $this->meta['domain'] = implode('.', $domain);
+        $this->meta[Enum::URL_SCHEME] = implode('.', $domain);
 
         return $this;
     }
 
+    /**
+     * @param string $host
+     * @return $this
+     */
     public function useHost(string $host): self
     {
+        if (!$this->pregCheck($host, '/^(?:([a-z.]+))[a-z0-9\-]+.[a-z]{2,8}$')) {
+            throw new \Exception('Invalid host');
+        }
+
         $this->extractDomain($host);
 
         return $this;
     }
 
+    /**
+     * @param string $subdomain
+     * @return $this
+     */
     public function useSubdomain(string $subdomain): self
     {
-        $this->meta['subDomain'] = $subdomain;
+        if (!$this->pregCheck($subdomain, '/^[a-z0-9.]+$/i')) {
+            throw new \InvalidArgumentException('Subdomain must be alphanumeric');
+        }
+        $this->meta[Enum::URL_SUB_DOMAIN] = $subdomain;
 
         return $this;
     }
 
+    /**
+     * @param string $fragment
+     * @return $this
+     */
     public function useFragment(string $fragment): self
     {
-        $this->meta['fragment'] = $fragment;
+        $this->meta[Enum::URL_FRAGMENT] = $fragment;
 
         return $this;
     }
 
+    /**
+     * @return string
+     */
     public function getScheme(): string
     {
-        return $this->meta['scheme'] ?? '';
+        return $this->meta[Enum::URL_SCHEME] ?? '';
     }
 
+    /**
+     * @return string
+     */
     public function getHost(): string
     {
-        return $this->meta['host'] ?? '';
+        return $this->meta[Enum::URL_HOST] ?? '';
     }
 
+    /**
+     * @return int
+     */
     public function getPort(): int
     {
-        return (int) $this->meta['port'] ?? 80;
+        return (int) $this->meta[Enum::URL_PATH] ?? 80;
     }
 
+    /**
+     * @return string
+     */
     public function getPath(): string
     {
-        return $this->meta['path'] ?? '/';
+        return $this->meta[Enum::URL_PATH] ?? '/';
     }
 
+    /**
+     * @return string
+     */
     public function getQuery(): string
     {
-        return $this->meta['query'] ?? '';
+        return $this->meta[Enum::URL_QUERY] ?? '';
     }
 
+    /**
+     * @return string
+     */
     public function getFragment(): string
     {
-        return $this->meta['fragment'] ?? '';
+        return $this->meta[Enum::URL_FRAGMENT] ?? '';
     }
 
 
+    /**
+     * @return array
+     */
     public function getQueryParams(): array
     {
-        return $this->meta['queryParams'] ?? [];
+        return $this->meta[Enum::URL_QUERY_PARAMS] ?? [];
     }
 
+    /**
+     * @param string $key
+     * @return string|int|float
+     */
     public function getQueryParam(string $key): string|int|float
     {
-        return $this->meta['queryParams'][$key] ?? '';
+        return $this->meta[Enum::URL_QUERY_PARAMS][$key] ?? '';
     }
 
+    /**
+     * @param int $index
+     * @return string
+     */
     public function getSegment(int $index): string
     {
         $segments = explode('/', ltrim($this->getPath(), '/'));
         return $segments[$index] ?? '';
     }
 
+    /**
+     * @param int $index
+     * @param string $name
+     * @return $this
+     * @throws \Exception
+     */
     public function useSegment(int $index, string $name): self
     {
         $segments = explode('/', ltrim($this->getPath(), '/'));
@@ -173,11 +278,14 @@ class Url
         }
 
         $segments[$index] = $name;
-        $this->meta['path'] = '/' . implode('/', $segments);
+        $this->meta[Enum::URL_PATH] = '/' . implode('/', $segments);
 
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function isValid(): bool
     {
         $this->make();
@@ -185,11 +293,17 @@ class Url
         return filter_var($this->url, FILTER_VALIDATE_URL) !== false;
     }
 
+    /**
+     * @return bool
+     */
     public function hasSubdomain(): bool
     {
         return !is_null($this->getSubdomain());
     }
 
+    /**
+     * @return bool
+     */
     public function hasMultiLevelSubdomain(): bool
     {
         $subDomain = $this->getSubdomain();
@@ -209,29 +323,42 @@ class Url
         return $this;
     }
 
+    /**
+     * @param string $url
+     * @return bool
+     * @throws InvalidSignatureKey
+     */
     public function validate(string $url): bool
     {
         return $this->getUrlSigner()->validate($url);
     }
 
+    /**
+     * @return $this
+     */
     protected function make(): self
     {
-        $url = $this->meta['scheme'] . '://';
+        $url = $this->meta[Enum::URL_SCHEME] . '://';
         if ($this->hasSubdomain()) {
             $url .= $this->getSubdomain() . '.';
         }
 
         $url .= $this->getDomain();
-        $url .= isset($this->meta['port']) ? ':' . $this->meta['port'] : '';
-        $url .= $this->meta['path'];
-        $url .= $this->meta['query'] ? '?' . $this->meta['query'] : '';
-        $url .= $this->meta['fragment'] ? '#' . $this->meta['fragment'] : '';
+        $url .= isset($this->meta[Enum::URL_PATH]) ? ':' . $this->meta[Enum::URL_PATH] : '';
+        $url .= $this->meta[Enum::URL_PATH];
+        $url .= $this->meta[Enum::URL_QUERY] ? '?' . $this->meta[Enum::URL_QUERY] : '';
+        $url .= $this->meta[Enum::URL_FRAGMENT] ? '#' . $this->meta[Enum::URL_FRAGMENT] : '';
 
         $this->url = $url;
 
         return $this;
     }
 
+    /**
+     * @param string $domain
+     * @return void
+     * @throws \Exception
+     */
     protected function extractDomain(string $domain)
     {
         $host = explode('.', $domain);
@@ -239,45 +366,66 @@ class Url
         $subDomains = array_slice($host, 0, count($host) - 2);
         $domain = array_slice($host, count($host) - 2);
 
-        $this->meta['extension'] = $domain[1];
-        $this->meta['domain'] = implode('.', $domain);
+        $this->meta[Enum::URL_EXTENSION] = $domain[1];
+        $this->meta[Enum::URL_SCHEME] = implode('.', $domain);
         $host = '';
 
         if (count($subDomains) > 0) {
-            $this->meta['subDomain'] = implode('.', $subDomains);
-            $host = $this->meta['subDomain'] . '.';
+            $this->meta[Enum::URL_SUB_DOMAIN] = implode('.', $subDomains);
+            $host = $this->meta[Enum::URL_SUB_DOMAIN] . '.';
         }
 
-        $host = $this->meta['domain'];
-        $this->meta['host'] = $host;
+        $host = $this->meta[Enum::URL_SCHEME];
+        $this->meta[Enum::URL_HOST] = $host;
     }
 
     /**
      * @throws InvalidSignatureKey
      * @throws \Exception
      */
-    protected function getUrlSigner(): MD5UrlSigner
+    protected function getUrlSigner(): UrlSigner
     {
-        $key = $this->config['key'] ?? null;
+        $key = $this->config[Enum::CONFIG_KEY] ?? null;
         if (!$key) {
             throw new \Exception('No key found in config');
         }
 
         if ($this->urlSigner) return $this->urlSigner;
 
-        return new MD5UrlSigner($key);
+        $signerClass = $this->config[Enum::CONFIG_SIGNER] ?? MD5UrlSigner::class;
+        $signer = new $signerClass($key);
+
+        if (!$signer instanceof UrlSigner) {
+            throw new InvalidSignatureKey('Signer must be an instance of UrlSigner');
+        }
+
+        return $signer;
     }
 
+    /**
+     * @param string $url
+     * @return void
+     * @throws \Exception
+     */
     protected function extractUrl(string $url): void
     {
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            throw new \Exception('Invalid url');
+        }
+
         $this->url = $url;
 
         $this->meta = parse_url($this->url);
-        $this->meta['subDomain'] = null;
-        parse_str($this->meta['query'] ?? '', $queryParams);
-        $this->meta['queryParams'] = $queryParams;
+        $this->meta[Enum::URL_SUB_DOMAIN] = null;
+        parse_str($this->meta[Enum::URL_QUERY] ?? '', $queryParams);
+        $this->meta[Enum::URL_QUERY_PARAMS] = $queryParams;
 
         $this->extractDomain($this->getHost());
+    }
+
+    protected function pregCheck(string $string, string $pattern): bool
+    {
+        return preg_match($pattern, $string) === 1;
     }
 
 }
