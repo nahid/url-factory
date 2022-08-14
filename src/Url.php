@@ -38,6 +38,19 @@ class Url
         return $this->url;
     }
 
+    public function encode(): string
+    {
+        return urlencode($this->get());
+    }
+
+    public function decode(string $url): self
+    {
+        $this->url = urldecode($url);
+        $this->extractUrl($this->url);
+
+        return $this;
+    }
+
     /**
      * @return string
      */
