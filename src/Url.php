@@ -43,7 +43,7 @@ class Url
      */
     public function getDomain(): string
     {
-        return $this->meta[Enum::URL_SCHEME];
+        return $this->meta[Enum::URL_DOMAIN];
     }
 
     /**
@@ -142,7 +142,7 @@ class Url
         $this->meta[Enum::URL_EXTENSION] = $extension;
         $domain = explode('.', $this->getDomain());
         $domain[count($domain) - 1] = $extension;
-        $this->meta[Enum::URL_SCHEME] = implode('.', $domain);
+        $this->meta[Enum::URL_DOMAIN] = implode('.', $domain);
 
         return $this;
     }
@@ -208,7 +208,7 @@ class Url
      */
     public function getPort(): int
     {
-        return (int) $this->meta[Enum::URL_PATH] ?? 80;
+        return (int) $this->meta[Enum::URL_PORT] ?? 80;
     }
 
     /**
@@ -344,7 +344,7 @@ class Url
         }
 
         $url .= $this->getDomain();
-        $url .= isset($this->meta[Enum::URL_PATH]) ? ':' . $this->meta[Enum::URL_PATH] : '';
+        $url .= isset($this->meta[Enum::URL_PORT]) ? ':' . $this->meta[Enum::URL_PORT] : '';
         $url .= $this->meta[Enum::URL_PATH];
         $url .= $this->meta[Enum::URL_QUERY] ? '?' . $this->meta[Enum::URL_QUERY] : '';
         $url .= $this->meta[Enum::URL_FRAGMENT] ? '#' . $this->meta[Enum::URL_FRAGMENT] : '';
@@ -367,15 +367,15 @@ class Url
         $domain = array_slice($host, count($host) - 2);
 
         $this->meta[Enum::URL_EXTENSION] = $domain[1];
-        $this->meta[Enum::URL_SCHEME] = implode('.', $domain);
+        $this->meta[Enum::URL_DOMAIN] = implode('.', $domain);
         $host = '';
 
         if (count($subDomains) > 0) {
             $this->meta[Enum::URL_SUB_DOMAIN] = implode('.', $subDomains);
-            $host = $this->meta[Enum::URL_SUB_DOMAIN] . '.';
+            $host .= $this->meta[Enum::URL_SUB_DOMAIN] . '.';
         }
 
-        $host = $this->meta[Enum::URL_SCHEME];
+        $host .= $this->meta[Enum::URL_DOMAIN];
         $this->meta[Enum::URL_HOST] = $host;
     }
 
