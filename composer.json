@@ -1,0 +1,25 @@
+{
+    "name": "nahid/url-factory",
+    "description": "This package is provide all kinds of service to manipulate URLs",
+    "type": "library",
+    "require": {
+        "php": "^8.0",
+        "spatie/url-signer": "dev-main"
+    },
+    "require-dev": {
+        "symfony/var-dumper": "6.0.x-dev"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Nahid\\UrlFactory\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Nahid Bin Azhar",
+            "email": "nahid.dns@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev"
+}
