@@ -319,12 +319,34 @@ class Url
         return filter_var($this->url, FILTER_VALIDATE_URL) !== false;
     }
 
+    public function isActiveHost(): bool
+    {
+        if (!$this->isValid()) {
+            return false;
+        }
+
+        $resp = @get_headers($this->get());
+
+        return $resp !== false;
+    }
+
+    public function isValidUrl()
+    {
+        if (!$this->isValid()) {
+            return false;
+        }
+
+        $resp = @get_headers($this->get(), true);
+
+        return !($resp == false || $resp[0] != 'HTTP/1.1 200 OK');
+    }
+
     /**
      * @return bool
      */
     public function hasSubdomain(): bool
     {
-        return !is_null($this->getSubdomain());
+        return !empty($this->getSubdomain());
     }
 
     /**
@@ -371,9 +393,9 @@ class Url
 
         $url .= $this->getDomain();
         $url .= isset($this->meta[Enum::URL_PORT]) ? ':' . $this->meta[Enum::URL_PORT] : '';
-        $url .= $this->meta[Enum::URL_PATH];
-        $url .= $this->meta[Enum::URL_QUERY] ? '?' . $this->meta[Enum::URL_QUERY] : '';
-        $url .= $this->meta[Enum::URL_FRAGMENT] ? '#' . $this->meta[Enum::URL_FRAGMENT] : '';
+        $url .= $this->meta[Enum::URL_PATH] ?? '';
+        $url .= isset($this->meta[Enum::URL_QUERY]) ? '?' . $this->meta[Enum::URL_QUERY] : '';
+        $url .= isset($this->meta[Enum::URL_FRAGMENT]) ? '#' . $this->meta[Enum::URL_FRAGMENT] : '';
 
         $this->url = $url;
 
