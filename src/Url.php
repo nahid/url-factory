@@ -22,10 +22,13 @@ class Url
      * @param string $url
      * @param array $config
      */
-    public function __construct(string $url, array $config = [])
+    public function __construct(?string $url = null, array $config = [])
     {
         $this->config = $config;
-        $this->extractUrl($url);
+        if (!is_null($url)) {
+            $this->extractUrl($url);
+        }
+
     }
 
     /**
@@ -38,11 +41,19 @@ class Url
         return $this->url;
     }
 
+    /**
+     * @return string
+     */
     public function encode(): string
     {
         return urlencode($this->get());
     }
 
+    /**
+     * @param string $url
+     * @return $this
+     * @throws \Exception
+     */
     public function decode(string $url): self
     {
         $this->url = urldecode($url);
@@ -51,11 +62,18 @@ class Url
         return $this;
     }
 
+    /**
+     * @return string
+     */
     public function base64Encode(): string
     {
         return base64_encode($this->get());
     }
 
+    /**
+     * @return $this
+     * @throws \Exception
+     */
     public function base64Decode(): self
     {
         $this->url = base64_decode($this->url);
@@ -69,7 +87,7 @@ class Url
      */
     public function getDomain(): string
     {
-        return $this->meta[Enum::URL_DOMAIN];
+        return $this->meta[Enum::URL_DOMAIN] ?? '';
     }
 
     /**
@@ -102,10 +120,36 @@ class Url
     }
 
     /**
+     * @param array $keys
+     * @return $this
+     */
+    public function removeParams(array $keys): self
+    {
+        $currentParams = $this->getQueryParams();
+        $newParams = array_diff_key($currentParams, array_flip($keys));
+
+        return $this->useQueryParams($newParams);
+
+    }
+
+    /**
+     * @param array $params
+     * @return $this
+     */
+    public function useQueryParams(array $params): self
+    {
+        $this->meta[Enum::URL_QUERY_PARAMS] = $params;
+        $this->meta[Enum::URL_QUERY] = http_build_query($params);
+
+        return $this;
+
+    }
+
+    /**
      * @param string $uri
      * @return $this
      */
-    public function appendUriSegment(string $uri): self
+    public function appendPath(string $uri): self
     {
         if (!$this->pregCheck($uri, '/^[a-z0-9.\-_\/]+$/i')) {
             throw new \Exception('Invalid URI');
@@ -203,6 +247,28 @@ class Url
     }
 
     /**
+     * @param string $path
+     * @return $this
+     */
+    public function usePath(string $path): self
+    {
+        $this->meta[Enum::URL_PATH] = '/' . ltrim($path, '/');
+        return $this;
+    }
+
+
+    /**
+     * @param int $port
+     * @return $this
+     */
+    public function usePort(int $port): self
+    {
+        $this->meta[Enum::URL_PORT] = $port;
+
+        return $this;
+    }
+
+    /**
      * @param string $fragment
      * @return $this
      */
@@ -234,7 +300,7 @@ class Url
      */
     public function getPort(): int
     {
-        return (int) $this->meta[Enum::URL_PORT] ?? 80;
+        return  (int) ($this->meta[Enum::URL_PORT] ?? 80);
     }
 
     /**
@@ -242,7 +308,7 @@ class Url
      */
     public function getPath(): string
     {
-        return $this->meta[Enum::URL_PATH] ?? '/';
+        return $this->meta[Enum::URL_PATH] ?? '';
     }
 
     /**
@@ -386,16 +452,40 @@ class Url
      */
     protected function make(): self
     {
-        $url = $this->meta[Enum::URL_SCHEME] . '://';
+        $url = '';
+        $scheme = $this->getScheme();
+        if (!empty($scheme)) {
+            $url .= $scheme . '://';
+        }
+
         if ($this->hasSubdomain()) {
             $url .= $this->getSubdomain() . '.';
         }
 
-        $url .= $this->getDomain();
-        $url .= isset($this->meta[Enum::URL_PORT]) ? ':' . $this->meta[Enum::URL_PORT] : '';
-        $url .= $this->meta[Enum::URL_PATH] ?? '';
-        $url .= isset($this->meta[Enum::URL_QUERY]) ? '?' . $this->meta[Enum::URL_QUERY] : '';
-        $url .= isset($this->meta[Enum::URL_FRAGMENT]) ? '#' . $this->meta[Enum::URL_FRAGMENT] : '';
+        $domain = $this->getDomain();
+        if (!empty($domain)) {
+            $url .= $domain;
+        }
+
+        $port = $this->getPort();
+        if ($port != 80 && $port != 443) {
+            $url .= ':' . $port;
+        }
+
+        $path= $this->getPath();
+        if (!empty($path)) {
+            $url .= $path;
+        }
+
+        $query = $this->getQuery();
+        if (!empty($query)) {
+            $url .= '?' . $query;
+        }
+
+        $fragment = $this->getFragment();
+        if (!empty($fragment)) {
+            $url .= '#' . $fragment;
+        }
 
         $this->url = $url;
 
