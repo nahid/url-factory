@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nahid\UrlFactory;
 
 use Pdp\Storage\PsrStorageFactory;
@@ -46,6 +48,10 @@ class Url
 
     }
 
+    /**
+     * @param callable|null $fn
+     * @return Domain|$this
+     */
     public function domain(?callable $fn = null): Domain|self
     {
         if (is_null($fn)) {
@@ -57,6 +63,10 @@ class Url
         return $this;
     }
 
+    /**
+     * @param string $domain
+     * @return $this
+     */
     public function useDomain(string $domain): self
     {
         $this->domainClass->parse($domain);
@@ -231,6 +241,22 @@ class Url
     public function getScheme(): string
     {
         return $this->meta[Enum::URL_SCHEME] ?? '';
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsername(): string
+    {
+        return $this->meta[Enum::URL_USERNAME] ?? '';
+    }
+
+    /**
+     * @return string
+     */
+    public function getPassword(): string
+    {
+        return $this->meta[Enum::URL_PASSWORD] ?? '';
     }
 
     /**
@@ -450,11 +476,20 @@ class Url
 
     }
 
+    /**
+     * @param string $string
+     * @param string $pattern
+     * @return bool
+     */
     protected function pregCheck(string $string, string $pattern): bool
     {
         return preg_match($pattern, $string) === 1;
     }
 
+    /**
+     * @param array $config
+     * @return array
+     */
     protected function mergeConfig(array $config): array
     {
         $defaultConfig = [
@@ -468,12 +503,16 @@ class Url
         return array_merge($defaultConfig, $config);
     }
 
+    /**
+     * @param array|null $config
+     * @return PsrStorageFactory|null
+     */
     protected function makePsrStorageFactory(?array $config = null): ?PsrStorageFactory
     {
         if (is_null($config)) {
             $config = $this->config;
         }
-        
+
         $cacheClass = $config[Enum::CONFIG_PSR_CACHE_INTERFACE] ?? null;
         $clientClass = $config[Enum::CONFIG_PSR_CLIENT_INTERFACE] ?? null;
         $requestFactoryClass = $config[Enum::CONFIG_PSR_REQUEST_FACTORY_INTERFACE] ?? null;

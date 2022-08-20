@@ -1,9 +1,10 @@
 {
     "name": "nahid/url-factory",
-    "description": "This package is provide all kinds of service to manipulate URLs",
+    "description": "UrlFactory is a PHP package for working with URLs",
     "type": "library",
+    "keywords": ["url", "url-parser", "url-factory", "url-builder", "url-extractor", "uri", "domain"],
     "require": {
-        "php": "^8.0",
+        "php": ">=8.0",
         "spatie/url-signer": "dev-main",
         "jeremykendall/php-domain-parser": "dev-develop",
         "psr/simple-cache": "3.0.x-dev",
