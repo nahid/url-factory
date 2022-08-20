@@ -32,7 +32,8 @@ class Url
      */
     public function __construct(?string $url = null, array $config = [], ?Domain $domain = null)
     {
-        $this->config = $config;
+        $this->config = $this->mergeConfig($config);
+
         if (is_null($domain)) {
             $domain = new Domain(storage: $this->makePsrStorageFactory($config));
         }
@@ -472,6 +473,7 @@ class Url
         if (is_null($config)) {
             $config = $this->config;
         }
+        
         $cacheClass = $config[Enum::CONFIG_PSR_CACHE_INTERFACE] ?? null;
         $clientClass = $config[Enum::CONFIG_PSR_CLIENT_INTERFACE] ?? null;
         $requestFactoryClass = $config[Enum::CONFIG_PSR_REQUEST_FACTORY_INTERFACE] ?? null;
