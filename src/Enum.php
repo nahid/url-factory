@@ -26,4 +26,7 @@ interface Enum
 
     public const CONFIG_KEY = 'key';
     public const CONFIG_SIGNER = 'signer';
+    public const CONFIG_PSR_CACHE_INTERFACE = 'psrCacheInterface';
+    public const CONFIG_PSR_CLIENT_INTERFACE = 'psrClientInterface';
+    public const CONFIG_PSR_REQUEST_FACTORY_INTERFACE = 'psrRequestFactoryInterface';
 }

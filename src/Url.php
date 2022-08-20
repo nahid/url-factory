@@ -2,6 +2,10 @@
 
 namespace Nahid\UrlFactory;
 
+use Pdp\Storage\PsrStorageFactory;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\SimpleCache\CacheInterface;
 use Spatie\UrlSigner\Exceptions\InvalidExpiration;
 use Spatie\UrlSigner\Exceptions\InvalidSignatureKey;
 use Spatie\UrlSigner\MD5UrlSigner;
@@ -17,18 +21,45 @@ class Url
 
     protected ?UrlSigner $urlSigner = null;
 
+    protected Domain $domainClass;
+
 
     /**
-     * @param string $url
+     * @param string|null $url
      * @param array $config
+     * @param Domain|null $domain
+     * @throws \Exception
      */
-    public function __construct(?string $url = null, array $config = [])
+    public function __construct(?string $url = null, array $config = [], ?Domain $domain = null)
     {
         $this->config = $config;
+        if (is_null($domain)) {
+            $domain = new Domain(storage: $this->makePsrStorageFactory($config));
+        }
+
+        $this->domainClass = $domain;
+
         if (!is_null($url)) {
             $this->extractUrl($url);
         }
 
+    }
+
+    public function domain(?callable $fn = null): Domain|self
+    {
+        if (is_null($fn)) {
+            return $this->domainClass;
+        }
+
+        $fn($this->domainClass);
+
+        return $this;
+    }
+
+    public function useDomain(string $domain): self
+    {
+        $this->domainClass->parse($domain);
+        return $this;
     }
 
     /**
@@ -80,30 +111,6 @@ class Url
         $this->extractUrl($this->url);
 
         return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDomain(): string
-    {
-        return $this->meta[Enum::URL_DOMAIN] ?? '';
-    }
-
-    /**
-     * @return string
-     */
-    public function getExtension(): string
-    {
-        return $this->meta[Enum::URL_EXTENSION] ?? '';
-    }
-
-    /**
-     * @return string
-     */
-    public function getSubdomain(): string
-    {
-        return $this->meta[Enum::URL_SUB_DOMAIN] ?? '';
     }
 
     /**
@@ -185,68 +192,6 @@ class Url
     }
 
     /**
-     * @param string $domain
-     * @return $this
-     */
-    public function useDomain(string $domain): self
-    {
-        if (!$this->pregCheck($domain, '/^(?:([a-z.]+))[a-z0-9\-]+.[a-z]{2,8}$/i')) {
-            throw new \Exception('Invalid domain');
-        }
-
-        $this->extractDomain($domain);
-
-        return $this;
-    }
-
-    /**
-     * @param string $extension
-     * @return $this
-     */
-    public function useExtension(string $extension): self
-    {
-        if (!$this->pregCheck($extension, '/^[a-z]{2,8}$/i')) {
-            throw new \InvalidArgumentException('Invalid extension');
-        }
-
-        $this->meta[Enum::URL_EXTENSION] = $extension;
-        $domain = explode('.', $this->getDomain());
-        $domain[count($domain) - 1] = $extension;
-        $this->meta[Enum::URL_DOMAIN] = implode('.', $domain);
-
-        return $this;
-    }
-
-    /**
-     * @param string $host
-     * @return $this
-     */
-    public function useHost(string $host): self
-    {
-        if (!$this->pregCheck($host, '/^(?:([a-z.]+))[a-z0-9\-]+.[a-z]{2,8}$')) {
-            throw new \Exception('Invalid host');
-        }
-
-        $this->extractDomain($host);
-
-        return $this;
-    }
-
-    /**
-     * @param string $subdomain
-     * @return $this
-     */
-    public function useSubdomain(string $subdomain): self
-    {
-        if (!$this->pregCheck($subdomain, '/^[a-z0-9.]+$/i')) {
-            throw new \InvalidArgumentException('Subdomain must be alphanumeric');
-        }
-        $this->meta[Enum::URL_SUB_DOMAIN] = $subdomain;
-
-        return $this;
-    }
-
-    /**
      * @param string $path
      * @return $this
      */
@@ -285,14 +230,6 @@ class Url
     public function getScheme(): string
     {
         return $this->meta[Enum::URL_SCHEME] ?? '';
-    }
-
-    /**
-     * @return string
-     */
-    public function getHost(): string
-    {
-        return $this->meta[Enum::URL_HOST] ?? '';
     }
 
     /**
@@ -407,23 +344,6 @@ class Url
         return !($resp == false || $resp[0] != 'HTTP/1.1 200 OK');
     }
 
-    /**
-     * @return bool
-     */
-    public function hasSubdomain(): bool
-    {
-        return !empty($this->getSubdomain());
-    }
-
-    /**
-     * @return bool
-     */
-    public function hasMultiLevelSubdomain(): bool
-    {
-        $subDomain = $this->getSubdomain();
-
-        return str_contains($subDomain, '.');
-    }
 
     /**
      * @throws InvalidSignatureKey
@@ -458,14 +378,7 @@ class Url
             $url .= $scheme . '://';
         }
 
-        if ($this->hasSubdomain()) {
-            $url .= $this->getSubdomain() . '.';
-        }
-
-        $domain = $this->getDomain();
-        if (!empty($domain)) {
-            $url .= $domain;
-        }
+        $url .= $this->domain()->get();
 
         $port = $this->getPort();
         if ($port != 80 && $port != 443) {
@@ -490,31 +403,6 @@ class Url
         $this->url = $url;
 
         return $this;
-    }
-
-    /**
-     * @param string $domain
-     * @return void
-     * @throws \Exception
-     */
-    protected function extractDomain(string $domain)
-    {
-        $host = explode('.', $domain);
-
-        $subDomains = array_slice($host, 0, count($host) - 2);
-        $domain = array_slice($host, count($host) - 2);
-
-        $this->meta[Enum::URL_EXTENSION] = $domain[1];
-        $this->meta[Enum::URL_DOMAIN] = implode('.', $domain);
-        $host = '';
-
-        if (count($subDomains) > 0) {
-            $this->meta[Enum::URL_SUB_DOMAIN] = implode('.', $subDomains);
-            $host .= $this->meta[Enum::URL_SUB_DOMAIN] . '.';
-        }
-
-        $host .= $this->meta[Enum::URL_DOMAIN];
-        $this->meta[Enum::URL_HOST] = $host;
     }
 
     /**
@@ -554,16 +442,78 @@ class Url
         $this->url = $url;
 
         $this->meta = parse_url($this->url);
-        $this->meta[Enum::URL_SUB_DOMAIN] = null;
+        $this->domain()->parse($this->meta[Enum::URL_HOST]);
+
         parse_str($this->meta[Enum::URL_QUERY] ?? '', $queryParams);
         $this->meta[Enum::URL_QUERY_PARAMS] = $queryParams;
 
-        $this->extractDomain($this->getHost());
     }
 
     protected function pregCheck(string $string, string $pattern): bool
     {
         return preg_match($pattern, $string) === 1;
+    }
+
+    protected function mergeConfig(array $config): array
+    {
+        $defaultConfig = [
+            Enum::CONFIG_KEY => 'secret-key',
+            Enum::CONFIG_SIGNER => MD5UrlSigner::class,
+            Enum::CONFIG_PSR_CACHE_INTERFACE => null,
+            Enum::CONFIG_PSR_CLIENT_INTERFACE => null,
+            Enum::CONFIG_PSR_REQUEST_FACTORY_INTERFACE => null,
+        ];
+
+        return array_merge($defaultConfig, $config);
+    }
+
+    protected function makePsrStorageFactory(?array $config = null): ?PsrStorageFactory
+    {
+        if (is_null($config)) {
+            $config = $this->config;
+        }
+        $cacheClass = $config[Enum::CONFIG_PSR_CACHE_INTERFACE] ?? null;
+        $clientClass = $config[Enum::CONFIG_PSR_CLIENT_INTERFACE] ?? null;
+        $requestFactoryClass = $config[Enum::CONFIG_PSR_REQUEST_FACTORY_INTERFACE] ?? null;
+
+        if (is_null($cacheClass)) {
+            return null;
+        }
+
+        if (is_null($clientClass)) {
+            return null;
+        }
+
+        if (is_null($requestFactoryClass)) {
+            return null;
+        }
+
+        if (is_string($cacheClass)) {
+            $cacheClass = new $cacheClass();
+        }
+
+        if (is_string($clientClass)) {
+            $clientClass = new $clientClass();
+        }
+
+        if (is_string($requestFactoryClass)) {
+            $requestFactoryClass = new $requestFactoryClass();
+        }
+
+        if (!$cacheClass instanceof CacheInterface) {
+            return null;
+        }
+
+        if (!$clientClass instanceof ClientInterface) {
+            return null;
+        }
+
+        if (!$requestFactoryClass instanceof RequestFactoryInterface) {
+            return null;
+        }
+
+        return new PsrStorageFactory($cacheClass, $clientClass, $requestFactoryClass);
+
     }
 
 }

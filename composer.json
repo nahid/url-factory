@@ -4,7 +4,11 @@
     "type": "library",
     "require": {
         "php": "^8.0",
-        "spatie/url-signer": "dev-main"
+        "spatie/url-signer": "dev-main",
+        "jeremykendall/php-domain-parser": "dev-develop",
+        "psr/simple-cache": "3.0.x-dev",
+        "psr/http-client": "1.0.x-dev",
+        "psr/http-factory": "1.0.x-dev"
     },
     "require-dev": {
         "symfony/var-dumper": "6.0.x-dev"
