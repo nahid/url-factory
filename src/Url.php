@@ -116,9 +116,9 @@ class Url
      * @return $this
      * @throws \Exception
      */
-    public function base64Decode(): self
+    public function base64Decode(string $url): self
     {
-        $this->url = base64_decode($this->url);
+        $this->url = base64_decode($url);
         $this->extractUrl($this->url);
 
         return $this;
