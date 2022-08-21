@@ -16,7 +16,7 @@ UrlFactory is a PHP package for working with URLs. Its offer you to best develop
 
 ## Installation
 
-UrlFactory is available on [Packagist]([nahid/url-factory - Packagist](https://packagist.org/packages/nahid/url-factory)). You can directly install it in any package by running this command bellow
+UrlFactory is available on [Packagist](https://packagist.org/packages/nahid/url-factory)). You can directly install it in any package by running this command bellow
 
 
 
